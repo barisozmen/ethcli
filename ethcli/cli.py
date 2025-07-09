@@ -1,20 +1,20 @@
 import click
 
-from network_commands import network_group
-from wallet_commands import wallet_group
-from tx_commands import tx_group
-from contract_commands import contract_group
-from compile_commands import compile_group
-from account_commands import account_group
-from analytics_commands import analytics_group
-from sign_commands import sign_group
-from sync_commands import sync_group
-from test_commands import test_group
-from config_commands import config_group
-from help_commands import help_group
-from export_commands import export_group
-from scan_commands import scan_group
-from nft_commands import nft_group
+from .network_commands import network_group
+from .wallet_commands import wallet_group
+from .tx_commands import tx_group
+from .contract_commands import contract_group
+from .compile_commands import compile_group
+from .account_commands import account_group
+from .analytics_commands import analytics_group
+from .sign_commands import sign_group
+from .sync_commands import sync_group
+from .test_commands import test_group
+from .config_commands import config_group
+from .help_commands import help_group
+from .export_commands import export_group
+from .scan_commands import scan_group
+from .nft_commands import nft_group
 # ... and so on for all other command groups
 
 @click.group()
