@@ -49,3 +49,33 @@ if __name__ == '__main__':
     # This allows testing the command group independently, if necessary
     # For example: python network_commands.py list
     network_group()
+
+# Added Price Command
+import requests
+
+@network_group.command('price')
+@click.option('--coin', default='ethereum', help='The coin ID to fetch the price for (e.g., ethereum, bitcoin).')
+@click.option('--currency', default='usd', help='The currency to display the price in (e.g., usd, eur, gbp).')
+def get_price(coin, currency):
+    """Fetch the current price of a cryptocurrency from CoinGecko."""
+    api_url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies={currency}"
+    click.echo(f"Fetching price for {coin} in {currency.upper()}...")
+    try:
+        response = requests.get(api_url)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        data = response.json()
+
+        if coin in data and currency in data[coin]:
+            price = data[coin][currency]
+            click.echo(f"Current price of {coin.capitalize()}: {price} {currency.upper()}")
+        else:
+            click.echo(f"Could not find price data for {coin} in {currency.upper()}.", err=True)
+            if coin not in data:
+                click.echo(f"Coin ID '{coin}' might be invalid or not supported by CoinGecko's simple API.", err=True)
+            elif currency not in data.get(coin, {}):
+                 click.echo(f"Currency '{currency}' might be invalid or not supported for {coin}.", err=True)
+
+    except requests.exceptions.RequestException as e:
+        click.echo(f"HTTP Request Error fetching price: {e}", err=True)
+    except Exception as e:
+        click.echo(f"An error occurred: {e}", err=True)

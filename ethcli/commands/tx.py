@@ -1,4 +1,7 @@
 import click
+from web3 import Web3
+from ethcli import config # For API keys if direct web3 calls need it, or for general config
+from ethcli.commands.account import get_web3_provider # To get configured w3 instance
 
 @click.group('tx')
 def tx_group():
@@ -26,11 +29,65 @@ def send_transaction(to_address, value):
 @tx_group.command('status')
 @click.argument('txhash', type=str)
 def transaction_status(txhash):
-    """Check status of a transaction."""
-    click.echo(f"Checking status for transaction: {txhash}")
-    # Placeholder: Implement transaction status checking logic
-    click.echo(f"Status for {txhash}: Confirmed (Block #123456)")
-    click.echo(f"From: 0xSENDER, To: 0xRECIPIENT, Value: X ETH")
+    """Check status and details of a transaction."""
+    click.echo(f"Fetching details for transaction: {txhash}...")
+
+    w3 = get_web3_provider()
+    if not w3:
+        return
+
+    try:
+        if not Web3.is_hex(txhash) or len(txhash) != 66:
+            click.echo("Invalid transaction hash format.", err=True)
+            return
+
+        tx = w3.eth.get_transaction(txhash)
+        if not tx:
+            click.echo(f"Transaction {txhash} not found.")
+            # It might be pending or not yet propagated.
+            # Etherscan might find it faster if it's very new.
+            # For this command, we'll rely on the node.
+            return
+
+        click.echo(click.style("Transaction Details:", fg="cyan", bold=True))
+        click.echo(f"  Hash: {tx['hash'].hex()}")
+        click.echo(f"  From: {tx['from']}")
+        click.echo(f"  To: {tx['to']}")
+        click.echo(f"  Value: {Web3.from_wei(tx['value'], 'ether')} ETH")
+        click.echo(f"  Gas Price: {Web3.from_wei(tx['gasPrice'], 'gwei')} Gwei")
+        click.echo(f"  Gas Limit: {tx['gas']}")
+        click.echo(f"  Nonce: {tx['nonce']}")
+        if tx.get('input') and tx['input'] != '0x':
+             click.echo(f"  Input Data: {tx['input'][:66]}... (truncated if long)" if len(tx['input']) > 66 else f"  Input Data: {tx['input']}")
+        else:
+            click.echo("  Input Data: 0x (Empty)")
+
+
+        if tx['blockHash']:
+            click.echo(f"  Block Hash: {tx['blockHash'].hex()}")
+            click.echo(f"  Block Number: {tx['blockNumber']}")
+            click.echo(f"  Transaction Index: {tx['transactionIndex']}")
+
+            receipt = w3.eth.get_transaction_receipt(txhash)
+            if receipt:
+                click.echo(click.style("\nTransaction Receipt:", fg="cyan", bold=True))
+                status = "Success" if receipt.status == 1 else "Failed"
+                status_color = "green" if receipt.status == 1 else "red"
+                click.echo(f"  Status: {click.style(status, fg=status_color)}")
+                click.echo(f"  Cumulative Gas Used in Block: {receipt.cumulativeGasUsed}")
+                click.echo(f"  Gas Used by Tx: {receipt.gasUsed}")
+                if receipt.contractAddress:
+                    click.echo(f"  Contract Created: {receipt.contractAddress}")
+                if receipt.logs:
+                    click.echo(f"  Logs: {len(receipt.logs)} events")
+                    # Optionally, could try to decode logs if ABIs are available, but that's advanced.
+            else:
+                click.echo(click.style("Receipt not yet available (transaction might be in an uncle block or node not fully synced).", fg="yellow"))
+        else:
+            click.echo(click.style("Status: Pending (not yet mined)", fg="yellow"))
+
+    except Exception as e:
+        click.echo(f"An error occurred: {e}", err=True)
 
 @tx_group.command('gas-estimate')
 @click.option('--to', 'to_address', required=True, type=str, help="Recipient address for gas estimation.")

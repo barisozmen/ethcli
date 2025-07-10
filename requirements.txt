@@ -1,0 +1,4 @@
+web3
+click
+requests
+# requests is often a dependency of web3 or other libs, but good to have explicitly for API calls
